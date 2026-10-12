@@ -1,0 +1,30 @@
+name: test
+
+# Installs the formula on clean runners and runs its test block, so a bad url, sha256 or
+# install step shows up here rather than on someone's machine.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  install:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: Homebrew/actions/setup-homebrew@main
+      - name: tap this checkout
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/gulsahsarsilmaz"
+          ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/gulsahsarsilmaz/homebrew-chaff"
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: brew audit --strict --online gulsahsarsilmaz/chaff/chaff
+      - run: brew install gulsahsarsilmaz/chaff/chaff
+      - run: brew test gulsahsarsilmaz/chaff/chaff
+      - run: chaff help
