@@ -1,0 +1,65 @@
+name: bump
+
+# Keeps the formula on the newest chaff without anyone copying digests by hand. Daily, or on
+# demand: find npm's latest, verify the tarball against the registry's sha512, install and
+# test the new formula on macOS and Linux, and only then commit it. Commits made with the
+# workflow token do not trigger other workflows, so the testing happens here.
+on:
+  schedule:
+    - cron: '17 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency: bump
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    outputs:
+      changed: ${{ steps.bump.outputs.changed }}
+      version: ${{ steps.bump.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - id: bump
+        run: |
+          out=$(.github/bump.sh | tail -1); echo "$out"
+          echo "changed=$([ "${out%% *}" = changed ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "version=${out##* }" >> "$GITHUB_OUTPUT"
+
+  verify:
+    needs: check
+    if: needs.check.outputs.changed == 'true'
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: Homebrew/actions/setup-homebrew@main
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: .github/bump.sh
+      - name: tap this checkout
+        run: |
+          mkdir -p "$(brew --repository)/Library/Taps/gulsahsarsilmaz"
+          rm -rf "$(brew --repository)/Library/Taps/gulsahsarsilmaz/homebrew-chaff"
+          ln -s "$GITHUB_WORKSPACE" "$(brew --repository)/Library/Taps/gulsahsarsilmaz/homebrew-chaff"
+      - run: brew audit --strict --online gulsahsarsilmaz/chaff/chaff
+      - run: brew install gulsahsarsilmaz/chaff/chaff
+      - run: brew test gulsahsarsilmaz/chaff/chaff
+      - run: chaff version | grep -q "chaff ${{ needs.check.outputs.version }}"
+
+  commit:
+    needs: [check, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: .github/bump.sh
+      - run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -am "chaff ${{ needs.check.outputs.version }}"
+          git push
