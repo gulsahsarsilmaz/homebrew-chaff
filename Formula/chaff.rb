@@ -1,8 +1,8 @@
 class Chaff < Formula
   desc "Find and safely clean dead build output, caches and worktrees on a dev machine"
   homepage "https://github.com/gulsahsarsilmaz/chaff"
-  url "https://registry.npmjs.org/@gulsahsarsilmaz/chaff/-/chaff-0.3.3.tgz"
-  sha256 "aac88d442777eadd074d98f638fa82d42c4f5c051435b14fee1a37ffd8c1f5b7"
+  url "https://registry.npmjs.org/@gulsahsarsilmaz/chaff/-/chaff-0.3.4.tgz"
+  sha256 "97cd634e3a32758f919d5a2b10c850989fbe9ddeaec77b8332fa6c3528721b93"
   license "MIT"
 
   # chaff is dependency-free JavaScript; it needs a Node runtime and nothing else.
